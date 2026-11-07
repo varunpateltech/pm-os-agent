@@ -41,4 +41,4 @@ List every discrete decision or action in your agent's workflow, then score each
 
 ## Hardest call
 
-**Decide relevant context.** My first instinct scored it H/L/H: picking context changes nothing, so it felt like a clean below-the-line call. Then I realised Northstar sits next to Orbit, an embargoed project. If Cortex pulls the wrong context, confidential info lands in a leadership draft. I kept it below the line, but re-scored it H/M/M and added a spot-check. **Settling axis: blast radius.** Reversibility alone made it look safe; what it could leak is what made it borderline.
+My hardest call was **"Decide relevant context."** My first instinct scored it H/L/H, because picking context changes nothing and it looked like a clean below-the-line call. Then I realised that Northstar sits next to Orbit, an embargoed project, so if Cortex pulls the wrong context, confidential information lands in a leadership draft. I kept it below the line, but I re-scored it H/M/M and added a spot-check. The settling axis was **blast radius**: reversibility alone made it look safe, but what it could leak made it borderline.
