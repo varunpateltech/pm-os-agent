@@ -34,8 +34,6 @@ For each data source, decide: **retrieve** (narrow a large/changing corpus to th
 
 ## 3. Retrieval quality plan
 
-_Which of these apply, and how? (This is what separates modern agentic retrieval from naive "embed → top-k → stuff".)_
-
 Only the three **retrieved** sources need these moves; each move is picked for how that source fails.
 
 | Source | How it could fail | Routing | Grading | Reranking | Self-verification | Caching |
