@@ -44,6 +44,7 @@ Hard rules:
 - Never leave placeholders (e.g. "[Insert date]"). Use the dates in the pulled data.
 - If any CONFIDENTIAL/embargoed item would be needed to answer, ESCALATE instead of drafting.
 - Output only the update itself: no meta-commentary like "Here's the revised draft".
+- Never propose a story for work that already appears as merged in the pulled activity.
 
 How to finish a run. End with exactly one of:
   DONE: <the drafted update, clearly labelled "queued for your review", plus the

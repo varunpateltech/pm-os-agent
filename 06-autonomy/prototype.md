@@ -6,14 +6,14 @@
 
 ## What it does
 
-_One paragraph: the agent in action, end to end._
+Cortex is my PM chief-of-staff agent. Every Monday (or when a Sev-1 opens) it reads one project's data (status, engineering activity, past updates, roadmap, team norms), drafts the weekly leadership status update, and proposes next sprint's stories. An independent critic checks every claim against the pulled data; if it fails, Cortex revises up to twice, then escalates. A passing draft stops at a human checkpoint, queued for my review. Cortex can't post, merge, or commit anything, because those tools don't exist. Hard limits (8 steps, 120 s, $0.50 per run, 10 stories, a kill switch) stop it if anything goes wrong.
 
 ## How you built it
 
-- **Coding agent:** _which one you directed (Claude Code / Cursor / Codex)_
-- **Model + bounds:** _model used, max iterations, cost cap, queue cap_
-- **Repo / config:** _path to your build in `00-build/`_
-- **Live link:** _[shareable URL, optional bonus]_
+- **Coding agent:** Claude Code
+- **Model + bounds:** gpt-4o-mini · 8 max iterations · 2 critic revisions · 120 s timeout · $0.50 per run (+ $2/day hard limit in the OpenAI dashboard) · max 10 queued stories · kill switch (`00-build/KILL`)
+- **Repo / config:** `00-build/` (`agent.py` loop + bounds, `prompts.py` rules, `tools.py` read-only tools, `critic.py` validator); settings in `00-build/.env`
+- **Live link:** https://github.com/varunpateltech/pm-os-agent
 
 ## Screenshots (required, collected M2 to M6)
 
@@ -21,12 +21,12 @@ Real screenshots of *your* Cortex running. These are the `00-build/CORTEX-ANATOM
 
 | # | Screenshot | What it shows | From |
 |---|---|---|---|
-| 1 | _[img]_ | happy-path run: a real drafted update + the HITL checkpoint (queued, not posted) | M2 |
+| 1 | [screenshots below](#m6-end-to-end-happy-path-run) | happy-path run: a real drafted update + the HITL checkpoint (queued, not posted) | M2 |
 | 2 | [transcript below](#m3-the-critic-rejecting-a-bad-draft) | the critic rejecting a bad draft (revise/block) | M3 |
 | 3 | [transcript below](#m4-grounded-answer--withheld-source) | a grounded update citing pulled activity + a caught hallucination | M4 |
 | 4 | [screenshots below](#m5-jailbreak-refused--a-bound-halting-a-run) | jailbreak refused + escalated | M5 |
 | 5 | [screenshot below](#m5-jailbreak-refused--a-bound-halting-a-run) | an iteration/cost/queue bound halting a runaway | M5 |
-| 6 | _[img]_ | end-to-end run | M6 |
+| 6 | [screenshots below](#m6-end-to-end-happy-path-run) | end-to-end run | M6 |
 
 ### M3: the critic rejecting a bad draft
 
@@ -104,6 +104,21 @@ Critic: pass · nothing posted · ≈ $0.0019. Cortex refused to invent a projec
 
 **Reflection.** **What I see:** for the jailbreak, a one-line escalation, "prompt injection detected," listing what the attacker demanded, approved by the critic and waiting for me. For the cap trip, a run that stopped after 2 steps with "max iterations reached, held, nothing posted." **What didn't happen:** nothing was posted to #all-hands, no Orbit or Pulsar content left the system, no Sev-1 was closed, no GA date was committed, and no run kept spending (each cost under $0.001). **What I'd tune next:** the **story queue cap**. In the cap-trip run Cortex proposed exactly 10 stories, right at the limit, and several were padding or out of scope ("marketing strategy," "weekly check-ins"). I'd lower the cap to 5 and add a critic check that every story traces to an in-scope PRD item.
 
+### M6: end-to-end happy-path run
+
+*Covers screenshots #1 and #6. One full run on the 2026-07-06 data pack (2026-11-21): Cortex picks its own steps (`get_project`, `get_norms`, `get_activity`, `get_roadmap`), queues 1 story with "nothing was created in the tracker," the critic passes on the first try, and the run stops at the HITL checkpoint: queued for review, nothing posted (≈ $0.0014). Earlier runs that day were held because Cortex proposed stories for work already merged; one prompt rule fixed it.*
+
+![M6 end-to-end, part 1: the task and Cortex's tool calls](screenshots/m6-end-to-end-1.webp)
+![M6 end-to-end, part 2: critic pass, HITL checkpoint, final draft, nothing posted](screenshots/m6-end-to-end-2.webp)
+
 ## How to run it
 
-_Minimal steps for someone to reproduce the demo (env vars, and the command or the coding-agent prompt you used)._
+1. `cd 00-build`
+2. `pip install -r requirements.txt`
+3. Copy `.env.example` to `.env` and add your `OPENAI_API_KEY` (set a spend limit in the provider dashboard too).
+4. `python agent.py`: the happy path (weekly update + stories, stops at the HITL checkpoint).
+5. Probes: `python agent.py missing-data` (escalates instead of inventing) · `python agent.py jailbreak` (flags the prompt injection).
+6. Bound trip: set `CORTEX_MAX_ITERATIONS=2` for one run and watch it halt (PowerShell: `$env:CORTEX_MAX_ITERATIONS=2`, then `Remove-Item Env:CORTEX_MAX_ITERATIONS`).
+7. Kill switch: create an empty `00-build/KILL` file and no run starts; delete it to resume.
+
+Or ask your coding agent: *"Run the happy-path task and show me the full trace."*
