@@ -28,6 +28,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 from openai import OpenAI
@@ -49,6 +50,10 @@ MAX_ITERATIONS = int(os.environ.get("CORTEX_MAX_ITERATIONS", "8"))
 MAX_REVISIONS = int(os.environ.get("CORTEX_MAX_REVISIONS", "2"))
 COST_CAP_USD = float(os.environ.get("CORTEX_COST_CAP_USD", "0.50"))
 MAX_QUEUE_ITEMS = int(os.environ.get("CORTEX_MAX_QUEUE_ITEMS", "10"))
+# Wall-clock timeout for a whole run; also caps each model call so a hung request can't freeze it.
+TIMEOUT_SECONDS = float(os.environ.get("CORTEX_TIMEOUT_SECONDS", "120"))
+# Kill switch: if this file exists, no run starts and any running loop halts at its next step.
+KILL_SWITCH = Path(__file__).parent / "KILL"
 # Rough $ per 1M tokens for your chosen model, set to match its pricing.
 PRICE_IN = float(os.environ.get("CORTEX_PRICE_IN_PER_M", "0.15"))
 PRICE_OUT = float(os.environ.get("CORTEX_PRICE_OUT_PER_M", "0.60"))
@@ -138,7 +143,11 @@ def emit_deliverable(which: str, draft: str, *, accepted: bool,
 
 
 def run(which: str = "happy") -> None:
-    client = OpenAI()
+    if KILL_SWITCH.exists():
+        banner("KILL SWITCH is on (00-build/KILL exists). Cortex will not run.")
+        return
+    started = time.monotonic()
+    client = OpenAI(timeout=TIMEOUT_SECONDS)
     bounds = Bounds()
     task = tools.get_task(which)
     if "error" in task:
@@ -157,6 +166,21 @@ def run(which: str = "happy") -> None:
     last_draft = ""
 
     for step in range(1, MAX_ITERATIONS + 1):
+        if KILL_SWITCH.exists():
+            reason = "kill switch turned on mid-run"
+            banner(f"BOUND TRIPPED, {reason}. Halting and escalating to a human.")
+            emit_deliverable(which, last_draft, accepted=False,
+                             reason=reason, cost=bounds.cost)
+            return
+
+        elapsed = time.monotonic() - started
+        if elapsed >= TIMEOUT_SECONDS:
+            reason = f"timeout {TIMEOUT_SECONDS:.0f}s hit at {elapsed:.0f}s"
+            banner(f"BOUND TRIPPED, {reason}. Halting and escalating to a human.")
+            emit_deliverable(which, last_draft, accepted=False,
+                             reason=reason, cost=bounds.cost)
+            return
+
         if bounds.over_cap():
             reason = f"cost cap ${COST_CAP_USD} hit at ${bounds.cost:.4f}"
             banner(f"BOUND TRIPPED, {reason}. Halting and escalating to a human.")
